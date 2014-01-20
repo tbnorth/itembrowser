@@ -171,16 +171,13 @@ class ItemBrowserDock(QDockWidget, Ui_itembrowser):
 
     @pyqtSlot(name="on_previousButton_clicked")
     def previousFeaature(self):
-        i = self.listCombo.currentIndex()
-        n = max(0, i-1)
-        self.listCombo.setCurrentIndex(n)
-        self.saveCurrentFeature(n)
+        self.nextFeature(delta=-1)
           
     @pyqtSlot(name="on_nextButton_clicked")
-    def nextFeature(self):
+    def nextFeature(self, delta=1):
         i = self.listCombo.currentIndex()
         c = self.listCombo.count()
-        n = min(i+1, c-1)
+        n = max(0, min(i+delta, c-1))
         self.listCombo.setCurrentIndex(n)
         self.saveCurrentFeature(n)
 
@@ -284,14 +281,12 @@ class ItemBrowserDock(QDockWidget, Ui_itembrowser):
         """on_next5Button_clicked - jump forward 5% of the list
         """
         step = max(self.listCombo.count() // 20, 1)  # don't advance zero items
-        n = self.listCombo.currentIndex() + step
-        self.listCombo.setCurrentIndex(min(self.listCombo.count()-1, n))
+        self.nextFeature(delta=step)
     def on_previous5Button_clicked(self):
         """on_previous5Button_clicked - jump back 5% of the list
         """
         step = max(self.listCombo.count() // 20, 1)  # don't advance zero items
-        n = self.listCombo.currentIndex() - step
-        self.listCombo.setCurrentIndex(max(0, n))
+        self.nextFeature(delta=-step)
     @pyqtSlot(name="on_editFormButton_clicked")
     def openFeatureForm(self):
         self.iface.openFeatureForm(self.layer, self.getCurrentItem())
