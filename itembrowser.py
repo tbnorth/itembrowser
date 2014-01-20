@@ -60,25 +60,13 @@ class itemBrowser():
         self.helpAction.triggered.connect(lambda: QDesktopServices().openUrl(QUrl("http://3nids.github.io/itembrowser")))
         self.iface.addPluginToMenu("&Item Browser", self.helpAction)
 
-        # self.iface.currentLayerChanged.connect(self.currentLayerChanged)
-        # self.iface.mapCanvas().selectionChanged.connect(self.currentLayerChanged)
         QgsProject.instance().readProject.connect(self.reloadSession)
-
-        # self.currentLayerChanged(self.iface.legendInterface().currentLayer())
-              
     def unload(self):
         self.iface.removePluginMenu("&Item Browser", self.browserAction)
         self.iface.removePluginMenu("&Item Browser", self.uisettingsAction)
         self.iface.removePluginMenu("&Item Browser", self.helpAction)
         self.iface.removeToolBarIcon(self.browserAction)
         
-    def currentLayerChanged(self, layer):
-        enable = (layer is not None
-                  and layer.type() == QgsMapLayer.VectorLayer
-                  and layer.hasGeometryType()
-                  and len(layer.selectedFeaturesIds()) > 1)
-        self.browserAction.setEnabled(enable)
-
     def openBrowserDock(self, layer=None, currentFeature=0):
         if layer is None:
             layer = self.iface.legendInterface().currentLayer()

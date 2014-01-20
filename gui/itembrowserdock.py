@@ -106,10 +106,6 @@ class ItemBrowserDock(QDockWidget, Ui_itembrowser):
         self.cleanBrowserFields()
         self.rubber.reset()
         nItems = self.layer.selectedFeatureCount()
-        # if nItems < 2:
-        #     self.close()
-        #     self.layer.emit(SIGNAL("browserNoItem()"))
-        #     return
         self.browseFrame.setEnabled(True)
         if nItems < 2:
             # slow?  better way? speed seems ok, faster than feature[attribute]
