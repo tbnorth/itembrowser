@@ -26,7 +26,7 @@
 #---------------------------------------------------------------------
 
 from PyQt4.QtCore import SIGNAL, pyqtSlot, pyqtSignal, Qt
-from PyQt4.QtGui import QDockWidget, QIcon, QAction
+from PyQt4.QtGui import QDockWidget, QIcon, QAction, QMenu, QButtonGroup
 from qgis.core import QgsPoint, QgsRectangle, QgsFeatureRequest, QgsFeature
 from qgis.gui import QgsRubberBand
 
@@ -45,7 +45,7 @@ class ItemBrowserDock(QDockWidget, Ui_itembrowser):
         QDockWidget.__init__(self)
         self.setupUi(self)
 
-        self.setWindowTitle("ItemBrowser: %s" % layer.name())
+        self.setWindowTitle("Browse: %s.[ID]" % layer.name())
         if layer.hasGeometryType() is False:
             self.panCheck.setChecked(False)
             self.panCheck.setEnabled(False)
@@ -54,6 +54,11 @@ class ItemBrowserDock(QDockWidget, Ui_itembrowser):
 
         self.previousButton.setArrowType(Qt.LeftArrow)
         self.nextButton.setArrowType(Qt.RightArrow)
+        self.sortUp.setArrowType(Qt.UpArrow)
+        self.sortDown.setArrowType(Qt.DownArrow)
+        self.buttonGroup = QButtonGroup()
+        self.buttonGroup.addButton(self.sortUp)
+        self.buttonGroup.addButton(self.sortDown)
         icon = QIcon(":/plugins/itembrowser/icons/openform.svg")
         self.editFormButton.setIcon(icon)
 
@@ -82,6 +87,7 @@ class ItemBrowserDock(QDockWidget, Ui_itembrowser):
 
         self.rubber = QgsRubberBand(self.iface.mapCanvas())
         self.subset = []  # needed to keep old index in self.selectionChanged()
+        self.current_field = "[ID]"
         self.selectionChanged()
         self.getAttributeList()
         if currentFeature == self.listCombo.currentIndex():
@@ -169,9 +175,43 @@ class ItemBrowserDock(QDockWidget, Ui_itembrowser):
         """getAttributeList - load layers attributes into attribute selector 
         """
 
-        self.selectAttribute.addItem("[ID]")
+        menu = QMenu()
+        action = QAction("[ID]", self)
+        action.triggered.connect(lambda dummy, field="[ID]": self.setCurrentField(field))
+        menu.addAction(action)
         for field in self.layer.dataProvider().fields():
-            self.selectAttribute.addItem(field.name())
+            action = QAction(field.name(), self)
+            action.triggered.connect(
+                lambda dummy, field=field.name(): self.setCurrentField(field))
+            menu.addAction(action)
+        self.selectAttribute.setMenu(menu)
+        
+        # menu popup is delayed, so do this:
+        self.selectAttribute.clicked.connect(
+            lambda dummy, menu=menu, but=self.selectAttribute: 
+                menu.popup(but.mapToGlobal(but.pos())))
+    def setCurrentField(self, field_name):
+        """setCurrentField - use a different field / attribute for indexing
+
+        :Parameters:
+        - `field_name`: name of field
+        """
+
+        self.current_field = field_name
+        
+        self.setWindowTitle("Browse: %s.%s" % (self.layer.name(), field_name))
+        self.buttonGroup.setExclusive(False)  # needed to uncheck all
+        self.sortUp.setChecked(False)
+        self.sortDown.setChecked(False)
+        self.buttonGroup.setExclusive(True)
+        
+        for n, fid in enumerate(self.subset):
+            if field_name == "[ID]":
+                self.listCombo.setItemText(n, str(fid))
+            else:
+                feature = next(
+                    self.layer.getFeatures(QgsFeatureRequest().setFilterFid(fid)))
+                self.listCombo.setItemText(n, str(feature[field_name]))
     def doAction(self, i):
         f = self.getCurrentItem()
         self.actionButton.setDefaultAction(self.actionButton.actions()[i])
@@ -242,6 +282,8 @@ class ItemBrowserDock(QDockWidget, Ui_itembrowser):
         - `index`: combo box item index
         """
 
+        raise Exception('unsed')
+
         if self.selectAttribute.count() == 1:
             return  # happens when first entry added
 
@@ -260,7 +302,7 @@ class ItemBrowserDock(QDockWidget, Ui_itembrowser):
         order = []
         # faster to just sort self.listCombo text items, but
         # then numbers would be sorted as text, 100.3 < 2.1 etc.
-        field = self.selectAttribute.currentText()
+        field = self.current_field
         for n, fid in enumerate(self.subset):
             if field == "[ID]":
                 order.append( (fid, n) )
