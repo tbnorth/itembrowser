@@ -26,9 +26,11 @@
 #---------------------------------------------------------------------
 
 from PyQt4.QtCore import SIGNAL, pyqtSlot, pyqtSignal, Qt
-from PyQt4.QtGui import QDockWidget, QIcon, QAction, QMenu, QButtonGroup
+from PyQt4.QtGui import QDockWidget, QIcon, QAction, QMenu, QButtonGroup, QErrorMessage
 from qgis.core import QgsPoint, QgsRectangle, QgsFeatureRequest, QgsFeature
 from qgis.gui import QgsRubberBand
+
+import time
 
 from ..core.mysettings import MySettings
 from ..ui.ui_itembrowser import Ui_itembrowser
@@ -128,6 +130,8 @@ class ItemBrowserDock(QDockWidget, Ui_itembrowser):
                 self.listCombo.setCurrentIndex(new_index)
             except ValueError:
                 pass  # previously selected item not in new set
+        if self.current_field != "[ID]":
+            self.setCurrentField(self.current_field)
     def cleanBrowserFields(self):
         self.currentPosLabel.setText('0/0')
         self.listCombo.clear()
@@ -205,6 +209,8 @@ class ItemBrowserDock(QDockWidget, Ui_itembrowser):
         self.sortDown.setChecked(False)
         self.buttonGroup.setExclusive(True)
         
+        timeout = time.time() + 30
+        
         for n, fid in enumerate(self.subset):
             if field_name == "[ID]":
                 self.listCombo.setItemText(n, str(fid))
@@ -212,6 +218,12 @@ class ItemBrowserDock(QDockWidget, Ui_itembrowser):
                 feature = next(
                     self.layer.getFeatures(QgsFeatureRequest().setFilterFid(fid)))
                 self.listCombo.setItemText(n, str(feature[field_name]))
+            if time.time() > timeout:
+                qe = QErrorMessage()
+                qe.showMessage("Stopped reading features after 30 seconds, "
+                  "attributes after #%d displaying incorrectly" % n)
+                qe.exec_()
+                break
     def doAction(self, i):
         f = self.getCurrentItem()
         self.actionButton.setDefaultAction(self.actionButton.actions()[i])
@@ -298,24 +310,43 @@ class ItemBrowserDock(QDockWidget, Ui_itembrowser):
     @pyqtSlot(name="on_sortUp_clicked")
     def on_sortUp_clicked(self, reverse=False):
         """on_sortUp_clicked - sort list upwards
+        
+        Tries to sort numerically, because numeric attributes are often
+        stored as text.
         """
         order = []
-        # faster to just sort self.listCombo text items, but
-        # then numbers would be sorted as text, 100.3 < 2.1 etc.
-        field = self.current_field
-        for n, fid in enumerate(self.subset):
-            if field == "[ID]":
-                order.append( (fid, n) )
-            else:
-                feature = next(
-                    self.layer.getFeatures(QgsFeatureRequest().setFilterFid(fid)))
-                order.append( (feature[field], n) )
+        order_numeric = []
+        all_numeric = True
+        all_int = True
+        timeout = time.time()+30
+        for n in range(self.listCombo.count()):
+            s = self.listCombo.itemText(n)
+            order.append( (s, n) )
+            if all_numeric:
+                try:
+                    x = float(''.join(i for i in s if i in "0123456789-.eE"))
+                    all_int = all_int and x == int(x)
+                    order_numeric.append( (x, n) )
+                except ValueError:
+                    all_numeric = all_int = False
+            if time.time() > timeout:
+                qe = QErrorMessage()
+                qe.showMessage("Stopped preparing for sort after 30 seconds, "
+                  "no sorting occurred" % n)
+                qe.exec_()
+                return
+                    
+        if all_numeric:
+            order = order_numeric
         
         order.sort(reverse=reverse)
         old_fid = self.subset[self.listCombo.currentIndex()]
         self.subset = [self.subset[i[1]] for i in order]
         for n in range(self.listCombo.count()):
-            self.listCombo.setItemText(n, str(order[n][0]))
+            if all_int:
+                self.listCombo.setItemText(n, str(int(order[n][0])))
+            else:
+                self.listCombo.setItemText(n, str(order[n][0]))
         self.listCombo.setCurrentIndex(self.subset.index(old_fid))
     @pyqtSlot(name="on_sortDown_clicked")
     def on_sortDown_clicked(self):
