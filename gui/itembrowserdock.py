@@ -244,6 +244,7 @@ class ItemBrowserDock(QDockWidget, Ui_itembrowser):
                 feature = next(
                     self.layer.getFeatures(QgsFeatureRequest().setFilterFid(fid)))
                 self.listCombo.setItemText(n, str(feature[field]))
+    @pyqtSlot(name="on_sortUp_clicked")
     def on_sortUp_clicked(self, reverse=False):
         """on_sortUp_clicked - sort list upwards
         """
@@ -265,23 +266,28 @@ class ItemBrowserDock(QDockWidget, Ui_itembrowser):
         for n in range(self.listCombo.count()):
             self.listCombo.setItemText(n, str(order[n][0]))
         self.listCombo.setCurrentIndex(self.subset.index(old_fid))
+    @pyqtSlot(name="on_sortDown_clicked")
     def on_sortDown_clicked(self):
         """on_sortDown_clicked - sort list diwnwards
         """
         self.on_sortUp_clicked(reverse=True)
+    @pyqtSlot(name="on_lastButton_clicked")
     def on_lastButton_clicked(self):
         """on_lastButton_clicked - jump to last item in list
         """
         self.listCombo.setCurrentIndex(self.listCombo.count()-1)
+    @pyqtSlot(name="on_firstButton_clicked")
     def on_firstButton_clicked(self):
         """on_firstButton_clicked - jump to first item in list
         """
         self.listCombo.setCurrentIndex(0)
+    @pyqtSlot(name="on_next5Button_clicked")
     def on_next5Button_clicked(self):
         """on_next5Button_clicked - jump forward 5% of the list
         """
         step = max(self.listCombo.count() // 20, 1)  # don't advance zero items
         self.nextFeature(delta=step)
+    @pyqtSlot(name="on_previous5Button_clicked")
     def on_previous5Button_clicked(self):
         """on_previous5Button_clicked - jump back 5% of the list
         """
