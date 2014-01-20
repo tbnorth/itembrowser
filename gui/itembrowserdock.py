@@ -272,6 +272,26 @@ class ItemBrowserDock(QDockWidget, Ui_itembrowser):
         """on_sortDown_clicked - sort list diwnwards
         """
         self.on_sortUp_clicked(reverse=True)
+    def on_lastButton_clicked(self):
+        """on_lastButton_clicked - jump to last item in list
+        """
+        self.listCombo.setCurrentIndex(self.listCombo.count()-1)
+    def on_firstButton_clicked(self):
+        """on_firstButton_clicked - jump to first item in list
+        """
+        self.listCombo.setCurrentIndex(0)
+    def on_next5Button_clicked(self):
+        """on_next5Button_clicked - jump forward 5% of the list
+        """
+        step = max(self.listCombo.count() // 20, 1)  # don't advance zero items
+        n = self.listCombo.currentIndex() + step
+        self.listCombo.setCurrentIndex(min(self.listCombo.count()-1, n))
+    def on_previous5Button_clicked(self):
+        """on_previous5Button_clicked - jump back 5% of the list
+        """
+        step = max(self.listCombo.count() // 20, 1)  # don't advance zero items
+        n = self.listCombo.currentIndex() - step
+        self.listCombo.setCurrentIndex(max(0, n))
     @pyqtSlot(name="on_editFormButton_clicked")
     def openFeatureForm(self):
         self.iface.openFeatureForm(self.layer, self.getCurrentItem())
