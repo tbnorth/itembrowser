@@ -46,7 +46,7 @@ class itemBrowser():
         # browse action
         self.browserAction = QAction(QIcon(":/plugins/itembrowser/icons/itembrowser.svg"),
                                      "Browse selected items of current layer", self.iface.mainWindow())
-        self.browserAction.setEnabled(False)
+        self.browserAction.setEnabled(True)
         self.browserAction.triggered.connect(lambda(x): self.openBrowserDock())  # prevent passing "False" to the method
         self.iface.addToolBarIcon(self.browserAction)
         self.iface.addPluginToMenu("&Item Browser", self.browserAction)
@@ -60,11 +60,11 @@ class itemBrowser():
         self.helpAction.triggered.connect(lambda: QDesktopServices().openUrl(QUrl("http://3nids.github.io/itembrowser")))
         self.iface.addPluginToMenu("&Item Browser", self.helpAction)
 
-        self.iface.currentLayerChanged.connect(self.currentLayerChanged)
-        self.iface.mapCanvas().selectionChanged.connect(self.currentLayerChanged)
+        # self.iface.currentLayerChanged.connect(self.currentLayerChanged)
+        # self.iface.mapCanvas().selectionChanged.connect(self.currentLayerChanged)
         QgsProject.instance().readProject.connect(self.reloadSession)
 
-        self.currentLayerChanged(self.iface.legendInterface().currentLayer())
+        # self.currentLayerChanged(self.iface.legendInterface().currentLayer())
               
     def unload(self):
         self.iface.removePluginMenu("&Item Browser", self.browserAction)

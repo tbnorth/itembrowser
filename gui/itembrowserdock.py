@@ -81,6 +81,7 @@ class ItemBrowserDock(QDockWidget, Ui_itembrowser):
             self.actionButton.setDefaultAction(self.actionButton.actions()[0])
 
         self.rubber = QgsRubberBand(self.iface.mapCanvas())
+        self.subset = []  # needed to keep old index in self.selectionChanged()
         self.selectionChanged()
         self.getAttributeList()
         if currentFeature == self.listCombo.currentIndex():
@@ -99,20 +100,32 @@ class ItemBrowserDock(QDockWidget, Ui_itembrowser):
         self.dockRemoved.emit(self.layer.id())
           
     def selectionChanged(self):
+        old_fid = None
+        if self.subset and 0 <= self.listCombo.currentIndex() < len(self.subset):
+            old_fid = self.subset[self.listCombo.currentIndex()]
         self.cleanBrowserFields()
         self.rubber.reset()
         nItems = self.layer.selectedFeatureCount()
-        if nItems < 2:
-            self.close()
-            self.layer.emit(SIGNAL("browserNoItem()"))
-            return
+        # if nItems < 2:
+        #     self.close()
+        #     self.layer.emit(SIGNAL("browserNoItem()"))
+        #     return
         self.browseFrame.setEnabled(True)
-        self.subset = self.layer.selectedFeaturesIds()
+        if nItems < 2:
+            # slow?  better way? speed seems ok, faster than feature[attribute]
+            self.subset = [i.id() for i in self.layer.getFeatures()]
+        else:
+            self.subset = self.layer.selectedFeaturesIds()
         if self.settings.value("saveSelectionInProject"):
             self.layer.setCustomProperty("itemBrowserSelection", repr(self.subset))
         for fid in self.subset:
             self.listCombo.addItem("%u" % fid)
-
+        if old_fid is not None:  # reselect same item to avoid pan to somewhere else
+            try:
+                new_index = self.subset.index(old_fid)
+                self.listCombo.setCurrentIndex(new_index)
+            except ValueError:
+                pass  # previously selected item not in new set
     def cleanBrowserFields(self):
         self.currentPosLabel.setText('0/0')
         self.listCombo.clear()
