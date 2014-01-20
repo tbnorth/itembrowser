@@ -82,6 +82,7 @@ class ItemBrowserDock(QDockWidget, Ui_itembrowser):
 
         self.rubber = QgsRubberBand(self.iface.mapCanvas())
         self.selectionChanged()
+        self.getAttributeList()
         if currentFeature == self.listCombo.currentIndex():
             self.on_listCombo_currentIndexChanged(currentFeature)
         else:
@@ -155,6 +156,13 @@ class ItemBrowserDock(QDockWidget, Ui_itembrowser):
         else:
             raise NameError("feature not found")
 
+    def getAttributeList(self):
+        """getAttributeList - load layers attributes into attribute selector 
+        """
+
+        self.selectAttribute.addItem("[ID]")
+        for field in self.layer.dataProvider().fields():
+            self.selectAttribute.addItem(field.name())
     def doAction(self, i):
         f = self.getCurrentItem()
         self.actionButton.setDefaultAction(self.actionButton.actions()[i])
@@ -219,6 +227,51 @@ class ItemBrowserDock(QDockWidget, Ui_itembrowser):
                 return
             self.panScaleToItem(feature)
 
+    @pyqtSlot(int, name="on_selectAttribute_currentIndexChanged")
+    def on_selectAttribute_currentIndexChanged(self, index):
+        """on_selectAttribute_currentIndexChanged - different attribute
+        selected 
+
+        :Parameters:
+        - `index`: combo box item index
+        """
+
+        if self.selectAttribute.count() == 1:
+            return  # happens when first entry added
+
+        field = self.selectAttribute.currentText()
+        for n, fid in enumerate(self.subset):
+            if field == "[ID]":
+                self.listCombo.setItemText(n, str(fid))
+            else:
+                feature = next(
+                    self.layer.getFeatures(QgsFeatureRequest().setFilterFid(fid)))
+                self.listCombo.setItemText(n, str(feature[field]))
+    def on_sortUp_clicked(self, reverse=False):
+        """on_sortUp_clicked - sort list upwards
+        """
+        order = []
+        # faster to just sort self.listCombo text items, but
+        # then numbers would be sorted as text, 100.3 < 2.1 etc.
+        field = self.selectAttribute.currentText()
+        for n, fid in enumerate(self.subset):
+            if field == "[ID]":
+                order.append( (fid, n) )
+            else:
+                feature = next(
+                    self.layer.getFeatures(QgsFeatureRequest().setFilterFid(fid)))
+                order.append( (feature[field], n) )
+        
+        order.sort(reverse=reverse)
+        old_fid = self.subset[self.listCombo.currentIndex()]
+        self.subset = [self.subset[i[1]] for i in order]
+        for n in range(self.listCombo.count()):
+            self.listCombo.setItemText(n, str(order[n][0]))
+        self.listCombo.setCurrentIndex(self.subset.index(old_fid))
+    def on_sortDown_clicked(self):
+        """on_sortDown_clicked - sort list diwnwards
+        """
+        self.on_sortUp_clicked(reverse=True)
     @pyqtSlot(name="on_editFormButton_clicked")
     def openFeatureForm(self):
         self.iface.openFeatureForm(self.layer, self.getCurrentItem())
