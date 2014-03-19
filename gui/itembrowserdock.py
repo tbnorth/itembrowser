@@ -256,6 +256,7 @@ class ItemBrowserDock(QDockWidget, Ui_itembrowser):
         if self.listCombo.count() > 1:
             width = self.settings.value("rubberWidth")
             color = self.settings.value("rubberColor")
+            color.setAlpha(128)
             self.rubber.setColor(color)
             self.rubber.setWidth(width)
             self.rubber.setToGeometry(feature.geometry(), self.layer)
