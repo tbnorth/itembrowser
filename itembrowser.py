@@ -35,7 +35,42 @@ from gui.itembrowserdock import ItemBrowserDock
 
 import resources
 
+import socket
+import os
+import lproto
+lps = lproto.LProtoServer()
 
+def dispatch_script(msg, ses):
+    print("leoremote.py: dispatch script", msg)
+    return
+    fd, pth = tempfile.mkstemp(suffix='.py')
+    f = os.fdopen(fd,"w")
+    f.write(msg)
+    f.close()
+    # first run
+    if 'pydict' not in ses:
+        ses['pydict'] = {'g' : g }
+
+    # print("run file",pth)
+    execfile(pth, ses['pydict'])
+    # print("run done")
+
+lps.set_receiver(dispatch_script)
+
+# EKR: 2011/10/12
+if hasattr(socket,'AF_UNIX'):
+    uniqid = 'leoserv-%d' % os.getpid()
+else:
+    uniqid = '172.16.0.0',1
+
+lps.listen(uniqid)
+
+fullpath = lps.srv.fullServerName()
+#socket_file = os.path.expanduser('~/.leo/leoserv_sockname')
+#open(socket_file,'w').write(fullpath)
+#print('leoremote.py: file:   %s' % socket_file)
+print('leoremote.py: server: %s' % fullpath)
+    
 class itemBrowser():
     def __init__(self, iface):
         self.iface = iface
