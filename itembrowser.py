@@ -35,47 +35,72 @@ from gui.itembrowserdock import ItemBrowserDock
 
 import resources
 
+# for server
 import socket
 import os
 import lproto
-lps = lproto.LProtoServer()
-
-def dispatch_script(msg, ses):
-    print("leoremote.py: dispatch script", msg)
-    return
-    fd, pth = tempfile.mkstemp(suffix='.py')
-    f = os.fdopen(fd,"w")
-    f.write(msg)
-    f.close()
-    # first run
-    if 'pydict' not in ses:
-        ses['pydict'] = {'g' : g }
-
-    # print("run file",pth)
-    execfile(pth, ses['pydict'])
-    # print("run done")
-
-lps.set_receiver(dispatch_script)
-
-# EKR: 2011/10/12
-if hasattr(socket,'AF_UNIX'):
-    uniqid = 'leoserv-%d' % os.getpid()
-else:
-    uniqid = '172.16.0.0',1
-
-lps.listen(uniqid)
-
-fullpath = lps.srv.fullServerName()
-#socket_file = os.path.expanduser('~/.leo/leoserv_sockname')
-#open(socket_file,'w').write(fullpath)
-#print('leoremote.py: file:   %s' % socket_file)
-print('leoremote.py: server: %s' % fullpath)
     
 class itemBrowser():
     def __init__(self, iface):
         self.iface = iface
         self.settings = MySettings()
         self.docks = {}
+
+        self.init_server()
+        
+    def dispatch_script(self, msg, ses):
+        msg = str(msg)
+        print("leoremote.py: dispatch script", msg)
+        
+        if msg == "list":
+            print 'listing'
+            print('\n'.join(i.layer.name() for i in self.docks.values()))
+            return
+        
+        cmd = msg.split()
+        
+        key = [k for k in self.docks 
+               if self.docks[k].layer.name() == cmd[0]][0]
+        dock = self.docks[key]
+        
+        if cmd[1] == 'first':
+            dock.on_firstButton_clicked()
+        if cmd[1] == 'last':
+            dock.on_lastButton_clicked()
+        
+        return
+        fd, pth = tempfile.mkstemp(suffix='.py')
+        f = os.fdopen(fd,"w")
+        f.write(msg)
+        f.close()
+        # first run
+        if 'pydict' not in ses:
+            ses['pydict'] = {'g' : g }
+    
+        # print("run file",pth)
+        execfile(pth, ses['pydict'])
+        # print("run done")
+    
+        
+    def init_server(self):
+        
+        self.lps = lproto.LProtoServer()
+        self.lps.set_receiver(self.dispatch_script)
+
+        # EKR: 2011/10/12
+        if hasattr(socket,'AF_UNIX'):
+            uniqid = 'leoserv-%d' % os.getpid()
+        else:
+            uniqid = '172.16.0.0',1
+        
+        self.lps.listen(uniqid)
+        
+        fullpath = self.lps.srv.fullServerName()
+        socket_file = os.path.expanduser('/tmp/ib_sockname')
+        open(socket_file,'w').write(fullpath)
+        print('leoremote.py: file:   %s' % socket_file)
+        print('leoremote.py: server: %s' % fullpath)
+
 
     def initGui(self):
         # browse action
