@@ -50,7 +50,7 @@ class itemBrowser():
         
     def dispatch_script(self, msg, ses):
         msg = str(msg)
-        print("leoremote.py: dispatch script", msg)
+        # print("leoremote.py: dispatch script", msg)
         
         if msg == "list":
             print 'listing'
@@ -63,23 +63,33 @@ class itemBrowser():
                if self.docks[k].layer.name() == cmd[0]][0]
         dock = self.docks[key]
         
-        if cmd[1] == 'first':
-            dock.on_firstButton_clicked()
-        if cmd[1] == 'last':
-            dock.on_lastButton_clicked()
+        function = {
+            'first': dock.on_firstButton_clicked,
+            'last': dock.on_lastButton_clicked,
+            'next': dock.on_nextButton_clicked,
+            'prev': dock.on_previousButton_clicked,
+            'next5': dock.on_next5Button_clicked,
+            'prev5': dock.on_previous5Button_clicked,
+            'sortup': dock.on_sortUp_clicked,
+            'sortdown': dock.on_sortDown_clicked,
+        }.get(cmd[1])
+        if function:
+            function()
+            return
         
-        return
-        fd, pth = tempfile.mkstemp(suffix='.py')
-        f = os.fdopen(fd,"w")
-        f.write(msg)
-        f.close()
-        # first run
-        if 'pydict' not in ses:
-            ses['pydict'] = {'g' : g }
-    
-        # print("run file",pth)
-        execfile(pth, ses['pydict'])
-        # print("run done")
+        if cmd[1] == 'attrlist':
+            print('\n'.join(i.name() for i in dock.layer.dataProvider().fields()))
+            return
+        
+        if cmd[1] == 'attrsel':
+            dock.setCurrentField(cmd[2])
+            return
+            
+        if cmd[1] == 'itemsel':
+            dock.listCombo.setCurrentIndex(dock.listCombo.findText(cmd[2]))
+            return
+            
+
     
         
     def init_server(self):
